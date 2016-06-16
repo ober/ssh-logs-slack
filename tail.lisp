@@ -162,6 +162,7 @@ is replaced with replacement."
   (let ((i 0))
     (loop
        (if (>= *walk-time* i)
+	   (setf i 0)
 	   (find-me-new-files))
        (format t "alerts:~A myfiles:~A mytasks:~A i:~A~%" *alert-count* (length *myfiles*) (length *mytasks*) i)
        (inc i)
@@ -172,12 +173,11 @@ is replaced with replacement."
   #+allegro (progn
 	      (require 'osi)
 	      (with-open-file (x f)
-		(excl.osi:stat-ino (excl.osi:fstat x))))
+		(excl.osi:stat-size (excl.osi:fstat x))))
   #+lispworks (progn
-		(sys:file-stat-inode (sys:get-file-stat "/etc/issue")))
-  #+sbcl (sb-posix:stat-ino (sb-posix:fstat (open f)))
+		(sys:file-stat-size (sys:get-file-stat "/etc/issue")))
+  #+sbcl (sb-posix:stat-size (sb-posix:fstat (open f)))
   )
-
 
 (defun get-inode (f)
   #+allegro (progn
@@ -189,8 +189,3 @@ is replaced with replacement."
   #+sbcl (sb-posix:stat-ino (sb-posix:fstat (open f)))
   )
 
-
-
-
-
-       
