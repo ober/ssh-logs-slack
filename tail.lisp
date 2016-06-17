@@ -214,6 +214,7 @@ is replaced with replacement."
 		(excl.osi:stat-ino stat))
   #+lispworks (sys:file-stat-inode stat)
   #+sbcl (sb-posix:stat-ino stat)
+  #+ccl (nth stat 4)
   )
 
 (defun get-stat (file)
@@ -223,6 +224,11 @@ is replaced with replacement."
 	      (excl.osi:fstat f))
   #+lispworks (sys:get-file-stat f)
   #+sbcl (sb-posix:fstat f)
+  #+ccl (progn
+	  (multiple-value-bind
+		(win mode size mtime inode uid blocksize rmtime gid dev)
+	      (ccl::%stat file)
+	  (list win mode size mtime inode uid blocksize rmtime gid dev)))
   ))
  
 
