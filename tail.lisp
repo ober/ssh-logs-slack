@@ -199,38 +199,40 @@ is replaced with replacement."
        (sleep 1))))
 
 
-(defun get-size (stat)
-  #+allegro (progn
-	      (require 'osi)
-	      (excl.osi:stat-size stat))
-  #+lispworks (progn
-		(sys:file-stat-size stat))
-  #+sbcl (sb-posix:stat-size stat)
-  #+ccl (elt stat 2)
-  )
+(defun get-size (file)
+  (let ((stat (get-stat file)))
+    #+allegro (progn
+		(require 'osi)
+		(excl.osi:stat-size stat))
+    #+lispworks (progn
+		  (sys:file-stat-size stat))
+    #+sbcl (sb-posix:stat-size stat)
+    #+ccl (elt stat 2)
+    ))
 
-(defun get-inode (stat)
-  #+allegro (progn
-	      (require 'osi)
+(defun get-inode (file)
+  (let ((stat (get-stat file)))
+    #+allegro (progn
+		(require 'osi)
 		(excl.osi:stat-ino stat))
-  #+lispworks (sys:file-stat-inode stat)
-  #+sbcl (sb-posix:stat-ino stat)
-  #+ccl (elt stat 4)
-  )
+    #+lispworks (sys:file-stat-inode stat)
+    #+sbcl (sb-posix:stat-ino stat)
+    #+ccl (elt stat 4)
+    ))
 
 (defun get-stat (file)
   (with-open-file (f file)
-  #+allegro (progn
-	      (require 'osi)
-	      (excl.osi:fstat f))
-  #+lispworks (sys:get-file-stat f)
-  #+sbcl (sb-posix:fstat f)
-  #+ccl (progn
-	  (multiple-value-bind
-		(win mode size mtime inode uid blocksize rmtime gid dev)
-	      (ccl::%stat file)
-	  (list win mode size mtime inode uid blocksize rmtime gid dev)))
-  ))
+    #+allegro (progn
+		(require 'osi)
+		(excl.osi:fstat f))
+    #+lispworks (sys:get-file-stat f)
+    #+sbcl (sb-posix:fstat f)
+    #+ccl (progn
+	    (multiple-value-bind
+		  (win mode size mtime inode uid blocksize rmtime gid dev)
+		(ccl::%stat file)
+	      (list win mode size mtime inode uid blocksize rmtime gid dev)))
+    ))
  
 
 
