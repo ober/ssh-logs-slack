@@ -206,6 +206,7 @@ is replaced with replacement."
   #+lispworks (progn
 		(sys:file-stat-size stat))
   #+sbcl (sb-posix:stat-size stat)
+  #+ccl (elt stat 2)
   )
 
 (defun get-inode (stat)
@@ -214,7 +215,7 @@ is replaced with replacement."
 		(excl.osi:stat-ino stat))
   #+lispworks (sys:file-stat-inode stat)
   #+sbcl (sb-posix:stat-ino stat)
-  #+ccl (nth stat 4)
+  #+ccl (elt stat 4)
   )
 
 (defun get-stat (file)
