@@ -6,6 +6,7 @@
 (defvar *walk-time* 100) ;; how often in secs do we want to go hunt for new files
 
 (defvar *slacktoken* "DEFINE YOUR TOKEN HERE!")
+(defvar *logfile* "sshd.log")
 (defvar *logdir* "/var/log/") ;; Define your location for ssh.log files to be found.
 (defvar *ssh-log-channel* "ssh") ;; Name of channel to send to
 (defvar *ssh-slack-user* "SSHBot") ;; Name of bot that sends messages to above channel.
@@ -138,6 +139,32 @@ is replaced with replacement."
 	       (follow-file-and-alert x pattern reformatter deliver)))
 	  *mytasks*)))))
 
+(defun do-on-dir (logname logdir command)
+  (setf (pcall:thread-pool-size) *maxfiles*)
+  (cl-fad:walk-directory
+   logdir
+   (lambda (x)
+     (if (string= (file-namestring x) logname)
+	 (funcall command x)))))
+
+
+(defun find-me-new-files ()
+  (do-on-dir
+      (*logfile* *logdir*)))
+
+(defun check-for-log-updates ()
+  
+  )
+ 
+(defun update-state (f)
+  (let* ((stat (get-stat f))
+	 (size (get-size stat))
+	 (inode (get-size stat)))
+    (setf (gethash (file-namestring f) *state*)
+      ))
+
+    
+
 (defun log-ssh-logins ()
   (find-logs "sshd.log" "/var/log/hosts/" "Accepted publickey" #'ssh-reformat-line #'slack-log-ssh)
   (loop (format t "count:~A~%" *alert-count*)  (sleep 1)))
@@ -158,34 +185,46 @@ is replaced with replacement."
 #+clozure
 (ignore-errors (ccl:ipaddr-to-hostname (ccl:dotted-to-ipaddr ip))))
 
+
+
 (defun main()
   (let ((i 0))
     (loop
        (if (>= *walk-time* i)
 	   (setf i 0)
 	   (find-me-new-files))
-       (format t "alerts:~A myfiles:~A mytasks:~A i:~A~%" *alert-count* (length *myfiles*) (length *mytasks*) i)
+       (check-for-log-updates)
+       (format t "alerts:~A myfiles:~A i:~A~%" *alert-count* (length *myfiles*) i)
        (inc i)
        (sleep 1))))
 
 
-(defun get-size (f)
+(defun get-size (stat)
   #+allegro (progn
 	      (require 'osi)
-	      (with-open-file (x f)
-		(excl.osi:stat-size (excl.osi:fstat x))))
+	      (excl.osi:stat-size stat))
   #+lispworks (progn
-		(sys:file-stat-size (sys:get-file-stat "/etc/issue")))
-  #+sbcl (sb-posix:stat-size (sb-posix:fstat (open f)))
+		(sys:file-stat-size stat))
+  #+sbcl (sb-posix:stat-size stat)
   )
 
-(defun get-inode (f)
+(defun get-inode (stat)
   #+allegro (progn
 	      (require 'osi)
-	      (with-open-file (x f)
-		(excl.osi:stat-ino (excl.osi:fstat x))))
-  #+lispworks (progn
-		(sys:file-stat-inode (sys:get-file-stat "/etc/issue")))
-  #+sbcl (sb-posix:stat-ino (sb-posix:fstat (open f)))
+		(excl.osi:stat-ino stat))
+  #+lispworks (sys:file-stat-inode stat)
+  #+sbcl (sb-posix:stat-ino stat)
   )
+
+(defun get-stat (file)
+  (with-open-file (f file)
+  #+allegro (progn
+	      (require 'osi)
+	      (excl.osi:fstat f))
+  #+lispworks (sys:get-file-stat f)
+  #+sbcl (sb-posix:fstat f)
+  ))
+ 
+
+
 
