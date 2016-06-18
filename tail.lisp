@@ -1,13 +1,13 @@
 (load "~/quicklisp/setup.lisp")
 
 (defvar *mytasks* (list))
-(defvar *myfiles* (list))
+(defvar *myfiles* (make-hash-table :test 'equalp))
 (defvar *state* (make-hash-table :test 'equalp))
 (defvar *walk-time* 100) ;; how often in secs do we want to go hunt for new files
 
 (defvar *slacktoken* "DEFINE YOUR TOKEN HERE!")
 (defvar *logfile* "sshd.log")
-(defvar *logdir* "/var/log/") ;; Define your location for ssh.log files to be found.
+(defvar *logdir* "/data/log/") ;; Define your location for ssh.log files to be found.
 (defvar *ssh-log-channel* "ssh") ;; Name of channel to send to
 (defvar *ssh-slack-user* "SSHBot") ;; Name of bot that sends messages to above channel.
 
@@ -68,7 +68,7 @@ is replaced with replacement."
   (slack-send msg *ssh-log-channel* *ssh-slack-user*))
 
 (defun slack-send (msg channel user)
-    (slack-io-send msg *slacktoken* channel user))
+  (slack-io-send msg *slacktoken* channel user))
 
 (defun slack-io-send (msg token channel user)
   (let ((output (drakma:http-request
@@ -139,31 +139,19 @@ is replaced with replacement."
 	       (follow-file-and-alert x pattern reformatter deliver)))
 	  *mytasks*)))))
 
-(defun do-on-dir (logname logdir command)
-  (setf (pcall:thread-pool-size) *maxfiles*)
-  (cl-fad:walk-directory
-   logdir
-   (lambda (x)
-     (if (string= (file-namestring x) logname)
-	 (funcall command x)))))
 
 
-(defun find-me-new-files ()
-  (do-on-dir
-      (*logfile* *logdir*)))
 
 (defun check-for-log-updates ()
   
   )
- 
+
 (defun update-state (f)
   (let* ((stat (get-stat f))
 	 (size (get-size stat))
 	 (inode (get-size stat)))
     (setf (gethash (file-namestring f) *state*)
-      ))
-
-    
+	  )))
 
 (defun log-ssh-logins ()
   (find-logs "sshd.log" "/var/log/hosts/" "Accepted publickey" #'ssh-reformat-line #'slack-log-ssh)
@@ -180,11 +168,10 @@ is replaced with replacement."
   (ignore-errors (sb-bsd-sockets:host-ent-name
 		  (sb-bsd-sockets:get-host-by-address
 		   (sb-bsd-sockets:make-inet-address ip))))
-#+lispworks
-(comm:get-host-entry ip :fields '(:name))
-#+clozure
-(ignore-errors (ccl:ipaddr-to-hostname (ccl:dotted-to-ipaddr ip))))
-
+  #+lispworks
+  (comm:get-host-entry ip :fields '(:name))
+  #+clozure
+  (ignore-errors (ccl:ipaddr-to-hostname (ccl:dotted-to-ipaddr ip))))
 
 
 (defun main()
@@ -197,7 +184,6 @@ is replaced with replacement."
        (format t "alerts:~A myfiles:~A i:~A~%" *alert-count* (length *myfiles*) i)
        (inc i)
        (sleep 1))))
-
 
 (defun get-size (file)
   (let ((stat (get-stat file)))
@@ -233,7 +219,21 @@ is replaced with replacement."
 		(ccl::%stat file)
 	      (list win mode size mtime inode uid blocksize rmtime gid dev)))
     ))
- 
 
+(defun find-me-new-files ()
+  (defvar *myfiles* (make-hash-table :test 'equalp))
+  (do-on-dir
+      ;;      *logfile* *logdir*
+      "sshd.log" "/data/logs"
+      #'(lambda (x)
+	  (format t "x:~A hsh:~A~%" x (hash-table-count *myfiles*))
+	  (setf
+	   (gethash (file-namestring x) *myfiles*) t))))
 
-
+(defun do-on-dir (logname logdir command)
+  "Run command on logdir for logname"
+  (cl-fad:walk-directory
+   logdir
+   (lambda (x)
+     (if (string= (file-namestring x) logname)
+	 (funcall command x)))))
