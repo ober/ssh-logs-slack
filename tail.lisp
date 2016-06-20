@@ -173,7 +173,6 @@ is replaced with replacement."
   #+clozure
   (ignore-errors (ccl:ipaddr-to-hostname (ccl:dotted-to-ipaddr ip))))
 
-
 (defun main()
   (let ((i 0))
     (loop
