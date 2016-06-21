@@ -139,13 +139,6 @@ is replaced with replacement."
 	       (follow-file-and-alert x pattern reformatter deliver)))
 	  *mytasks*)))))
 
-
-
-
-(defun check-for-log-updates ()
-  
-  )
-
 (defun update-state (f)
   (let* ((stat (get-stat f))
 	 (size (get-size stat))
@@ -220,14 +213,17 @@ is replaced with replacement."
     ))
 
 (defun find-me-new-files ()
-  (defvar *myfiles* (make-hash-table :test 'equalp))
   (do-on-dir
-      ;;      *logfile* *logdir*
       "sshd.log" "/data/logs"
       #'(lambda (x)
-	  (format t "x:~A hsh:~A~%" x (hash-table-count *myfiles*))
-	  (setf
-	   (gethash (file-namestring x) *myfiles*) t))))
+	  (let ((inode (get-inode x))
+		(size (get-size x)))
+	    ;;(if (> size (gethash 
+	    (format t "x:~A inode:~A size:~A old-size:~A~%" x inode size (car (gethash x *myfiles*)))
+	    (setf
+	     (gethash x *myfiles*)
+	     `((cons inode ,(format nil "~A" inode))
+	       `(cons size ,(format nil "~A" size))))))))
 
 (defun do-on-dir (logname logdir command)
   "Run command on logdir for logname"
@@ -236,3 +232,4 @@ is replaced with replacement."
    (lambda (x)
      (if (string= (file-namestring x) logname)
 	 (funcall command x)))))
+
