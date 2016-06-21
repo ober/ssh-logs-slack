@@ -41,6 +41,13 @@ FILE-NAME. ARGS is passed directly to open."
 	  (if (is-new-log lline 3600)
 	      (send-message-to-all (funcall reformatter lline) deliver))))))
 
+(defun file-follow-at-offset (file offset)
+  (with-open-file (in file :direction :input)
+    (file-position in offset)
+    (loop for line = (read-line in nil)
+       while line
+       do (format t "file:~A line:~A~%" file line))))
+
 (defun tail-file (x)
   (with-followed-file (s x)
     (format t "~&~A~%" (read-line s))))
@@ -139,12 +146,12 @@ is replaced with replacement."
 	       (follow-file-and-alert x pattern reformatter deliver)))
 	  *mytasks*)))))
 
-(defun update-state (f)
-  (let* ((stat (get-stat f))
-	 (size (get-size stat))
-	 (inode (get-size stat)))
-    (setf (gethash (file-namestring f) *state*)
-	  )))
+;; (defun update-state (f)
+;;   (let* ((stat (get-stat f))
+;; 	 (size (get-size stat))
+;; 	 (inode (get-size stat)))
+;;     (setf (gethash (file-namestring f) *state*)
+;; 	  )))
 
 (defun log-ssh-logins ()
   (find-logs "sshd.log" "/var/log/hosts/" "Accepted publickey" #'ssh-reformat-line #'slack-log-ssh)
@@ -214,33 +221,32 @@ is replaced with replacement."
 
 (defun find-me-new-files ()
   (do-on-dir
-      "sshd.log" "/Users/akkad/ssh"
+      "sshd.log" "/data/logs"
       #'(lambda (x)
 	  (let* ((inode (get-inode x))
-		(size (get-size x))
+		 (size (get-size x))
 		 (old_entry (gethash x *myfiles*))
 		 (old_size (or (cdr (assoc 'size old_entry)) 0)))
 	    (if (> size old_size)
 		;; do update here, process file with given offset.
 		(process-file-async x old_size)
 		;; update size to new size.
-
 		)
-	    (format t "x:~A inode:~A size:~A old-size:~A~%" x inode size old_size)
+	    (format t "x:~A inode:~A size:~D old-size:~D~%" x inode size old_size)
 	    (update-hash-entry x inode size)))))
 
 (defun process-file-async (file old_size)
-	  (bordeaux-threads:make-thread
-	   #'(lambda ()
-	       (follow-file-and-alert x pattern reformatter deliver)))
-	  *mytasks*)))))
-)
+  "Seek to old_size offset and begin parsing for lines we want"
+  (bordeaux-threads:make-thread
+   #'(lambda (file old_size)
+       (file-follow-at-offset file old_size))))
 
 (defun update-hash-entry (file inode size)
+  "stick in new size and inode for a given full file path and name"
   (setf (gethash file *myfiles*)
 	(list
-	 (cons 'inode (format nil "~A" inode))
-	 (cons 'size (format nil "~A" size)))))
+	 (cons 'inode (format nil "~D" inode))
+	 (cons 'size (format nil "~D" size)))))
 
 (defun do-on-dir (logname logdir command)
   "Run command on logdir for logname"
