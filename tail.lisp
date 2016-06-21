@@ -214,16 +214,33 @@ is replaced with replacement."
 
 (defun find-me-new-files ()
   (do-on-dir
-      "sshd.log" "/data/logs"
+      "sshd.log" "/Users/akkad/ssh"
       #'(lambda (x)
-	  (let ((inode (get-inode x))
-		(size (get-size x)))
-	    ;;(if (> size (gethash 
-	    (format t "x:~A inode:~A size:~A old-size:~A~%" x inode size (car (gethash x *myfiles*)))
-	    (setf
-	     (gethash x *myfiles*)
-	     `((cons inode ,(format nil "~A" inode))
-	       `(cons size ,(format nil "~A" size))))))))
+	  (let* ((inode (get-inode x))
+		(size (get-size x))
+		 (old_entry (gethash x *myfiles*))
+		 (old_size (or (cdr (assoc 'size old_entry)) 0)))
+	    (if (> size old_size)
+		;; do update here, process file with given offset.
+		(process-file-async x old_size)
+		;; update size to new size.
+
+		)
+	    (format t "x:~A inode:~A size:~A old-size:~A~%" x inode size old_size)
+	    (update-hash-entry x inode size)))))
+
+(defun process-file-async (file old_size)
+	  (bordeaux-threads:make-thread
+	   #'(lambda ()
+	       (follow-file-and-alert x pattern reformatter deliver)))
+	  *mytasks*)))))
+)
+
+(defun update-hash-entry (file inode size)
+  (setf (gethash file *myfiles*)
+	(list
+	 (cons 'inode (format nil "~A" inode))
+	 (cons 'size (format nil "~A" size)))))
 
 (defun do-on-dir (logname logdir command)
   "Run command on logdir for logname"
@@ -232,4 +249,3 @@ is replaced with replacement."
    (lambda (x)
      (if (string= (file-namestring x) logname)
 	 (funcall command x)))))
-
