@@ -229,7 +229,8 @@ is replaced with replacement."
 		 (old_size (or (cdr (assoc 'size old_entry)) 0)))
 	    (if (> size old_size)
 		;; do update here, process file with given offset.
-		(process-file-async x old_size)
+		(format t "going to update it! with process-file-async!")
+		;;(process-file-async x old_size)
 		;; update size to new size.
 		)
 	    (format t "x:~A inode:~A size:~D old-size:~D~%" x inode size old_size)
@@ -245,8 +246,8 @@ is replaced with replacement."
   "stick in new size and inode for a given full file path and name"
   (setf (gethash file *myfiles*)
 	(list
-	 (cons 'inode (format nil "~D" inode))
-	 (cons 'size (format nil "~D" size)))))
+	 (cons 'inode (parse-integer (format nil "~D" inode)))
+	 (cons 'size (parse-integer (format nil "~D" size))))))
 
 (defun do-on-dir (logname logdir command)
   "Run command on logdir for logname"
